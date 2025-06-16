@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Stock Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f3f4f6;
+    margin: 0; 
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    color: #1f2937;
+  }
+  #app {
+    background: white;
+    padding: 2rem 3rem;
+    border-radius: 12px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  }
+  h1 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 2rem;
+    color: #111827;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  input[type="text"],
+  input[type="number"] {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 2px solid #d1d5db;
+    flex: 1;
+    transition: border-color 0.25s ease;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    border-color: #2563eb;
+    outline: none;
+  }
+  button {
+    background: #2563eb;
+    border: none;
+    color: white;
+    padding: 0 18px;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled) {
+    background: #1e40af;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+  th, td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+  }
+  th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+  }
+  #total {
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-align: right;
+    margin-bottom: 1.5rem;
+    color: #111827;
+  }
+  #download-btn {
+    background: #10b981;
+  }
+  #download-btn:hover:not(:disabled) {
+    background: #047857;
+  }
+  #error-message {
+    color: #dc2626;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    min-height: 1.25rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div id="app" role="main" aria-label="Simple Stock Tracker">
+    <h1>Simple Stock Tracker</h1>
+    <form id="stock-form" aria-label="Add stock investment">
+      <input type="text" id="stock-symbol" placeholder="Stock Symbol (e.g., AAPL)" aria-label="Stock Symbol" maxlength="5" required />
+      <input type="number" id="stock-quantity" placeholder="Quantity" aria-label="Quantity" min="1" required />
+      <button type="submit" id="add-button" aria-label="Add stock">Add</button>
+    </form>
+    <div id="error-message" role="alert" aria-live="assertive"></div>
+    <table aria-label="Stock investments table">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Quantity</th>
+          <th>Price per share (USD)</th>
+          <th>Investment (USD)</th>
+        </tr>
+      </thead>
+      <tbody id="investment-list">
+        <!-- Filled dynamically -->
+      </tbody>
+    </table>
+    <div id="total" aria-live="polite" aria-atomic="true">Total Investment: $0.00</div>
+    <button id="download-btn" aria-label="Download investment list as CSV" disabled>Download CSV</button>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // Hardcoded stock prices dictionary
+  const stockPrices = {
+    AAPL: 180,
+    TSLA: 250,
+    GOOGL: 120,
+    MSFT: 300,
+    AMZN: 3300,
+  };
+
+  // State: list of investments as objects {symbol, quantity, price}
+  let investments = [];
+
+  // DOM Elements
+  const form = document.getElementById('stock-form');
+  const symbolInput = document.getElementById('stock-symbol');
+  const quantityInput = document.getElementById('stock-quantity');
+  const investmentList = document.getElementById('investment-list');
+  const totalDisplay = document.getElementById('total');
+  const downloadBtn = document.getElementById('download-btn');
+  const errorMessage = document.getElementById('error-message');
+
+  // Format number as currency USD
+  function formatUSD(value) {
+    return '$' + value.toFixed(2);
+  }
+
+  // Update the investment list UI
+  function updateInvestmentList() {
+    // Clear list
+    investmentList.innerHTML = '';
+
+    if(investments.length === 0) {
+      investmentList.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#6b7280;">No investments added yet</td></tr>';
+      downloadBtn.disabled = true;
+      updateTotalInvestment();
+      return;
+    }
+
+    investments.forEach(({symbol, quantity, price}) => {
+      const investmentValue = price * quantity;
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${symbol}</td>
+        <td>${quantity}</td>
+        <td>${formatUSD(price)}</td>
+        <td>${formatUSD(investmentValue)}</td>
+      `;
+      investmentList.appendChild(row);
+    });
+
+    downloadBtn.disabled = false;
+    updateTotalInvestment();
+  }
+
+  // Calculate and display total investment
+  function updateTotalInvestment() {
+    const total = investments.reduce((sum, inv) => sum + inv.price * inv.quantity, 0);
+    totalDisplay.textContent = `Total Investment: ${formatUSD(total)}`;
+  }
+
+  // Validate input and add investment if valid
+  function addInvestment(event) {
+    event.preventDefault();
+    errorMessage.textContent = '';
+
+    const symbolRaw = symbolInput.value.trim().toUpperCase();
+    const quantityRaw = quantityInput.value.trim();
+
+    if (!symbolRaw || !quantityRaw) {
+      errorMessage.textContent = 'Please enter both stock symbol and quantity.';
+      return;
+    }
+
+    const quantity = Number(quantityRaw);
+    if (isNaN(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+      errorMessage.textContent = 'Quantity must be a positive whole number.';
+      return;
+    }
+
+    if (!stockPrices.hasOwnProperty(symbolRaw)) {
+      errorMessage.textContent = `Stock symbol "${symbolRaw}" is not recognized. Available: ${Object.keys(stockPrices).join(', ')}`;
+      return;
+    }
+
+    // Check if symbol already exists in investments, update quantity
+    const existing = investments.find(inv => inv.symbol === symbolRaw);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      investments.push({symbol: symbolRaw, quantity, price: stockPrices[symbolRaw]});
+    }
+
+    symbolInput.value = '';
+    quantityInput.value = '';
+    symbolInput.focus();
+
+    updateInvestmentList();
+  }
+
+  // Generate CSV content for download
+  function generateCSV() {
+    const header = ['Stock Symbol', 'Quantity', 'Price per Share', 'Investment Value'];
+    const rows = investments.map(({symbol, quantity, price}) => {
+      const investmentValue = (price * quantity).toFixed(2);
+      return [symbol, quantity, price.toFixed(2), investmentValue];
+    });
+
+    const total = investments.reduce((sum, inv) => sum + inv.price * inv.quantity, 0).toFixed(2);
+
+    let csv = header.join(',') + '\n';
+    rows.forEach(row => {
+      csv += row.join(',') + '\n';
+    });
+    csv += `,,,Total Investment,${total}\n`;
+
+    return csv;
+  }
+
+  // Trigger download of CSV file
+  function downloadCSV() {
+    if (investments.length === 0) return;
+
+    const csvContent = generateCSV();
+    const blob = new Blob([csvContent], {type: 'text/csv'});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'stock_investment.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  form.addEventListener('submit', addInvestment);
+  downloadBtn.addEventListener('click', downloadCSV);
+
+  // Initialize empty list display
+  updateInvestmentList();
+
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Text-Based Hangman Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #ffffff;
+    color: #374151;
+    margin: 0;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #111827;
+  }
+  #game-container {
+    width: 100%;
+    max-width: 450px;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+  #word-display {
+    font-size: 2rem;
+    letter-spacing: 0.3rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  #message {
+    font-size: 1.1rem;
+    min-height: 1.5em;
+    margin-bottom: 1rem;
+    color: #6b7280;
+    text-align: center;
+  }
+  #guesses {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #6b7280;
+  }
+  #input-section {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+  #letter-input {
+    font-size: 1.2rem;
+    padding: 0.5rem 0.75rem;
+    width: 3rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.5rem;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 0.1rem;
+  }
+  #guess-button {
+    background: #10b981;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+  }
+  #guess-button:disabled {
+    background: #6ee7b7;
+    cursor: not-allowed;
+  }
+  #guess-button:hover:not(:disabled) {
+    background: #059669;
+  }
+  #reset-button {
+    margin-top: 1.5rem;
+    background: #3b82f6;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    display: none;
+    width: 100%;
+  }
+  #reset-button:hover {
+    background: #2563eb;
+  }
+</style>
+</head>
+<body>
+  <h1>Hangman Game</h1>
+  <div id="game-container">
+    <div id="word-display" aria-live="polite" aria-label="Word to guess">_ _ _ _ _</div>
+    <div id="message" aria-live="polite"></div>
+    <div id="guesses">Incorrect guesses left: 6</div>
+    <div id="input-section">
+      <input type="text" id="letter-input" maxlength="1" aria-label="Enter a letter to guess" autocomplete="off" />
+      <button id="guess-button" aria-label="Submit guess">Guess</button>
+    </div>
+    <button id="reset-button" aria-label="Restart game">Play Again</button>
+  </div>
+
+<script>
+  (() => {
+    'use strict';
+
+    const words = ['apple', 'orange', 'mango', 'banana', 'grape'];
+    const maxIncorrect = 6;
+
+    let targetWord = '';
+    let guessedLetters = new Set();
+    let incorrectGuesses = 0;
+    let gameOver = false;
+
+    const wordDisplay = document.getElementById('word-display');
+    const message = document.getElementById('message');
+    const guessesLeft = document.getElementById('guesses');
+    const letterInput = document.getElementById('letter-input');
+    const guessButton = document.getElementById('guess-button');
+    const resetButton = document.getElementById('reset-button');
+
+    // Select a random word from the list
+    function selectWord() {
+      return words[Math.floor(Math.random() * words.length)];
+    }
+
+    // Show current word state with guessed letters revealed
+    function updateWordDisplay() {
+      const display = [...targetWord].map(letter => 
+        guessedLetters.has(letter) ? letter.toUpperCase() : '_'
+      ).join(' ');
+      wordDisplay.textContent = display;
+    }
+
+    // Check if the player has won
+    function checkWin() {
+      for (const letter of targetWord) {
+        if (!guessedLetters.has(letter)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Update guesses left display
+    function updateGuessesLeft() {
+      guessesLeft.textContent = `Incorrect guesses left: ${maxIncorrect - incorrectGuesses}`;
+    }
+
+    // Reset the game state and UI
+    function resetGame() {
+      targetWord = selectWord();
+      guessedLetters.clear();
+      incorrectGuesses = 0;
+      gameOver = false;
+      message.textContent = 'Guess the word by entering one letter at a time.';
+      updateWordDisplay();
+      updateGuessesLeft();
+      letterInput.disabled = false;
+      guessButton.disabled = false;
+      resetButton.style.display = 'none';
+      letterInput.value = '';
+      letterInput.focus();
+    }
+
+    // Handle a guess submission
+    function handleGuess() {
+      if (gameOver) return;
+
+      let guess = letterInput.value.toLowerCase();
+      letterInput.value = '';
+
+      if (!guess.match(/^[a-z]$/)) {
+        message.textContent = 'Please enter a single letter from A to Z.';
+        return;
+      }
+
+      if (guessedLetters.has(guess)) {
+        message.textContent = `You already guessed the letter "${guess.toUpperCase()}". Try another one.`;
+        return;
+      }
+
+      guessedLetters.add(guess);
+
+      if (targetWord.includes(guess)) {
+        message.textContent = `Good guess! The letter "${guess.toUpperCase()}" is in the word.`;
+      } else {
+        incorrectGuesses++;
+        message.textContent = `Sorry, the letter "${guess.toUpperCase()}" is not in the word.`;
+      }
+
+      updateWordDisplay();
+      updateGuessesLeft();
+
+      if (checkWin()) {
+        message.textContent = `Congratulations! You guessed the word "${targetWord.toUpperCase()}" correctly!`;
+        gameOver = true;
+        letterInput.disabled = true;
+        guessButton.disabled = true;
+        resetButton.style.display = 'block';
+      }
+      else if (incorrectGuesses >= maxIncorrect) {
+        message.textContent = `Game over! You've used all guesses. The word was "${targetWord.toUpperCase()}".`;
+        wordDisplay.textContent = [...targetWord].map(l => l.toUpperCase()).join(' ');
+        gameOver = true;
+        letterInput.disabled = true;
+        guessButton.disabled = true;
+        resetButton.style.display = 'block';
+      } else {
+        letterInput.focus();
+      }
+    }
+
+    guessButton.addEventListener('click', handleGuess);
+    letterInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleGuess();
+      }
+    });
+    resetButton.addEventListener('click', resetGame);
+
+    // Initialize game on load
+    resetGame();
+  })();
+</script>
+</body>
+</html>
+

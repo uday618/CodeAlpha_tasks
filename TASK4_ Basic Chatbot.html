@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Rule-Based Chatbot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f9fafb;
+    margin: 0;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    color: #111827;
+  }
+  #chatbot-container {
+    background: white;
+    max-width: 480px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+  }
+  header {
+    background: #2563eb;
+    padding: 1rem 1.5rem;
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  #chat-area {
+    flex-grow: 1;
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    background: #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .message {
+    max-width: 70%;
+    padding: 0.75rem 1rem;
+    border-radius: 16px;
+    font-size: 1rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+  .user-message {
+    background: #2563eb;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 0;
+  }
+  .bot-message {
+    background: #e5e7eb;
+    color: #374151;
+    align-self: flex-start;
+    border-bottom-left-radius: 0;
+  }
+  form {
+    display: flex;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  #user-input {
+    flex-grow: 1;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 9999px;
+    border: 2px solid #d1d5db;
+    transition: border-color 0.25s ease;
+  }
+  #user-input:focus {
+    outline: none;
+    border-color: #2563eb;
+  }
+  #send-btn {
+    background: #2563eb;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-left: 1rem;
+    padding: 0 1.25rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  #send-btn:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+  #send-btn:hover:not(:disabled) {
+    background: #1e40af;
+  }
+</style>
+</head>
+<body>
+  <div id="chatbot-container" role="main" aria-label="Simple Rule-Based Chatbot Interface">
+    <header>Chatbot</header>
+    <div id="chat-area" aria-live="polite" aria-atomic="false" aria-relevant="additions"></div>
+    <form id="chat-form" aria-label="Chat input form">
+      <input type="text" id="user-input" autocomplete="off" placeholder="Type your message..." aria-label="Enter message" required />
+      <button type="submit" id="send-btn" aria-label="Send message">Send</button>
+    </form>
+  </div>
+
+<script>
+  (() => {
+    'use strict';
+
+    const chatArea = document.getElementById('chat-area');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Predefined chatbot replies
+    function getBotReply(message) {
+      const normalized = message.trim().toLowerCase();
+
+      if (normalized === 'hello' || normalized === 'hi') {
+        return 'Hi!';
+      } else if (normalized === 'how are you' || normalized === 'how are you?') {
+        return "I'm fine, thanks!";
+      } else if (normalized === 'bye' || normalized === 'goodbye') {
+        return 'Goodbye!';
+      } else if (normalized === '') {
+        return "Please say something!";
+      } else {
+        return "Sorry, I don't understand.";
+      }
+    }
+
+    // Append message to chat area
+    function appendMessage(text, isUser = false) {
+      const msgElem = document.createElement('div');
+      msgElem.classList.add('message');
+      msgElem.classList.add(isUser ? 'user-message' : 'bot-message');
+      msgElem.textContent = text;
+      chatArea.appendChild(msgElem);
+      chatArea.scrollTop = chatArea.scrollHeight; // Scroll to bottom
+    }
+
+    // Handle user submitting a message
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      appendMessage(message, true);
+
+      // Get bot reply
+      const reply = getBotReply(message);
+
+      // Delay bot reply by 500ms for realism
+      setTimeout(() => {
+        appendMessage(reply, false);
+
+        // If user says bye, disable input
+        if (reply.toLowerCase() === 'goodbye!') {
+          userInput.disabled = true;
+          sendBtn.disabled = true;
+          userInput.placeholder = "Chat ended.";
+        }
+      }, 500);
+
+      userInput.value = '';
+      userInput.focus();
+    });
+
+    // Initial bot greeting when page loads
+    appendMessage("Hello! I'm a simple chatbot. Try typing 'hello', 'how are you', or 'bye'.");
+
+  })();
+</script>
+</body>
+</html>
+
